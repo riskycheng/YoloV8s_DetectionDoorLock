@@ -2,6 +2,8 @@ import cv2
 
 from yolov8 import YOLOv8
 import sys, getopt
+import queue
+import threading
 
 min_compute_queue_length = 20
 min_scale_factor = 0.6
@@ -9,6 +11,26 @@ min_scale_factor = 0.6
 clear_global_queue_reaching_empty_det_length = 15
 global_current_continuous_empty_count = 0
 global_queue = []
+
+exit_flag = False
+
+# special design for dual-cameras sync
+queueA = queue.Queue()
+queueB = queue.Queue()
+# Event to signal when frames are ready in both queues
+frames_ready_event = threading.Event()
+
+# basic function used for caching frame into queue
+def capture_frames(cap, frame_queue):
+    while cap.isOpened():
+        try:
+            ret, frame = cap.read()
+            if not ret or exit_flag:
+                break
+            frame_queue.put(frame)
+            frames_ready_event.set()  # Signal that a frame is ready
+        except Exception as e:
+            print(e)
 
 
 def renderCounter(frame):
@@ -119,7 +141,7 @@ def startSingleExe(videoAddress):
 
 
 def startDualExe(videoAddressA, videoAddressB):
-    global global_current_continuous_empty_count
+    global global_current_continuous_empty_count, exit_flag
     
     # dual cameras
     capA = cv2.VideoCapture(videoAddressA)
@@ -145,25 +167,36 @@ def startDualExe(videoAddressA, videoAddressB):
     if not capA.isOpened() or not capB.isOpened():
         print('either RTSP-A or RTSP-B is not available!')
         return
+    
+    # Start separate threads to capture frames for each RTSP stream
+    threadA = threading.Thread(target=capture_frames, args=(capA, queueA))
+    threadB = threading.Thread(target=capture_frames, args=(capB, queueB))
+    threadA.start()
+    threadB.start()
 
-    while True:
+
+    while not exit_flag:
         # Press key q to stop
         if cv2.waitKey(1) == ord('q'):
+            exit_flag = True
             break
         
-        # try to fetch the frames from both RTSP
-        try:
-            ret_a, frame_a = capA.read()
-            ret_b, frame_b = capB.read()
-            frameIndex += 1
-            if frameIndex % skip_freq != 0:
-                continue
-            if not ret_a or not ret_b:
-                break
-        except Exception as e:
-            print('error while fetching frames ...', e)
+        frames_ready_event.wait()  # Wait until frames are ready
+        frame_a = queueA.get()
+        frame_b = queueB.get()
+        frames_ready_event.clear()  # Reset the event
+        if frameIndex % skip_freq != 0:
             continue
-        
+
+        # measure queues
+        queueA_len = queueA.qsize()
+        queueB_len = queueB.qsize()
+        print('queueA_len:%d, queueB_len:%d' %(queueA_len, queueB_len))
+
+        if queueA_len > 5 or queueB_len > 5:
+            queueA.queue.clear()
+            queueB.queue.clear()
+
         # start processing
         boxes_a, scores_a, class_ids_a = yolov8_detector(frame_a)
         boxes_b, scores_b, class_ids_b = yolov8_detector(frame_b)
@@ -201,7 +234,13 @@ def startDualExe(videoAddressA, videoAddressB):
         final_concat_img = renderDualCounter(combined_img_a, combined_img_b)
 
         cv2.imshow("Dual-RTSP", final_concat_img)
+        cv2.waitKey(1)
 
+    threadA.join()
+    threadB.join()
+
+    capA.release()
+    capB.release()
   
 
 # rtsp://admin:itv12345@192.168.1.187:554/Streaming/channels/101
