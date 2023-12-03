@@ -1,9 +1,11 @@
 import cv2
+from BoxDoorUntils import *
 
 from yolov8 import YOLOv8
 import sys, getopt
 import queue
 import threading
+from datetime import datetime
 
 min_compute_queue_length = 20
 min_scale_factor = 0.6
@@ -168,6 +170,12 @@ def startDualExe(videoAddressA, videoAddressB):
         print('either RTSP-A or RTSP-B is not available!')
         return
     
+    # save out to log
+    # Get the current system time
+    current_time = datetime.now()
+    time_str = current_time.strftime("%Y_%m_%d_%H_%M_%S")
+    logPath = './log_' + time_str + '.txt'
+
     # Start separate threads to capture frames for each RTSP stream
     threadA = threading.Thread(target=capture_frames, args=(capA, queueA))
     threadB = threading.Thread(target=capture_frames, args=(capB, queueB))
@@ -185,6 +193,7 @@ def startDualExe(videoAddressA, videoAddressB):
         frame_a = queueA.get()
         frame_b = queueB.get()
         frames_ready_event.clear()  # Reset the event
+        frameIndex += 1
         if frameIndex % skip_freq != 0:
             continue
 
@@ -196,6 +205,20 @@ def startDualExe(videoAddressA, videoAddressB):
         if queueA_len > 5 or queueB_len > 5:
             queueA.queue.clear()
             queueB.queue.clear()
+
+        # Get the current system time
+        current_time = datetime.now()
+        time_str = current_time.strftime("%Y_%m_%d_%H_%M_%S")
+
+        
+        fusedResultInfo_A = FusedResultInfo()
+        fusedResultInfo_A.camera_idx = addr1
+        fusedResultInfo_A.timeStamp = time_str
+        
+        fusedResultInfo_B = FusedResultInfo()
+        fusedResultInfo_B.camera_idx = addr2
+        fusedResultInfo_B.timeStamp = time_str
+
 
         # start processing
         boxes_a, scores_a, class_ids_a = yolov8_detector(frame_a)
@@ -218,12 +241,28 @@ def startDualExe(videoAddressA, videoAddressB):
         for box, score, class_id in zip(boxes_a, scores_a, class_ids_a):
             if class_id == 1: # indicates door-open
                 anyDoorOpen = True
-                break
+            
+            # assign to the structured data info
+            doorInfo = DoorDetResultInfo()
+            doorInfo.label = class_id
+            doorInfo.conf = score
+            # box in xyxy format
+            boxInfo = object_rect(x=box[0], y=box[1], width=box[2] - box[0], height=box[3] - box[1])
+            doorInfo.boundingBox = boxInfo
+            fusedResultInfo_A.doorInfoArray.append(doorInfo)
         
         for box, score, class_id in zip(boxes_b, scores_b, class_ids_b):
             if class_id == 1: # indicates door-open
                 anyDoorOpen = True
-                break
+            
+            # assign to the structured data info
+            doorInfo = DoorDetResultInfo()
+            doorInfo.label = class_id
+            doorInfo.conf = score
+            # box in xyxy format
+            boxInfo = object_rect(x=box[0], y=box[1], width=box[2] - box[0], height=box[3] - box[1])
+            doorInfo.boundingBox = boxInfo
+            fusedResultInfo_B.doorInfoArray.append(doorInfo)
         
         if anyDoorOpen:
             global_queue.append(1) # any door open
@@ -234,6 +273,9 @@ def startDualExe(videoAddressA, videoAddressB):
 
         cv2.imshow("Dual-RTSP", final_concat_img)
         cv2.waitKey(1)
+
+        write_file_json(logPath, fusedResultInfo_A, True)
+        write_file_json(logPath, fusedResultInfo_B, True)
 
     threadA.join()
     threadB.join()
