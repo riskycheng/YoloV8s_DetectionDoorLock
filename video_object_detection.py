@@ -199,7 +199,10 @@ def startDualExe(videoAddressA, videoAddressB):
 
         # start processing
         boxes_a, scores_a, class_ids_a = yolov8_detector(frame_a)
+        combined_img_a = yolov8_detector.draw_detections(frame_a)
         boxes_b, scores_b, class_ids_b = yolov8_detector(frame_b)
+        combined_img_b = yolov8_detector.draw_detections(frame_b)
+
         executedFrameCount += 1
         print('executed frames:' + str(executedFrameCount))
         
@@ -226,10 +229,6 @@ def startDualExe(videoAddressA, videoAddressB):
             global_queue.append(1) # any door open
         else:
             global_queue.append(0) # door all close
-
-
-        combined_img_a = yolov8_detector.draw_detections(frame_a)
-        combined_img_b = yolov8_detector.draw_detections(frame_b)
 
         final_concat_img = renderDualCounter(combined_img_a, combined_img_b)
 
