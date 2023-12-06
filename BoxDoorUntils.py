@@ -71,3 +71,12 @@ def write_file_json(file_path, info, append):
         file.write(json_data)
 
     return json_data
+
+
+
+def sendMQTTMessage(mqtt_client, json_message):
+    topic = 'itvtech/box_open_detection'
+    if mqtt_client.connected:
+        mqtt_client.publish(topic, json_message)
+    else:
+        print('error: mqtt service is not connected!')

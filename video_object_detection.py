@@ -6,6 +6,7 @@ import sys, getopt
 import queue
 import threading
 from datetime import datetime
+from MQTTUtils import MQTTClient
 
 min_compute_queue_length = 20
 min_scale_factor = 0.6
@@ -15,6 +16,12 @@ global_current_continuous_empty_count = 0
 global_queue = []
 
 exit_flag = False
+
+# MQTT related
+MQTT_IP_ADDRESS = '192.168.31.170'
+MQTT_PORT = 1883
+CLIENT_ID = 'BOX_DET_ALGO'
+global_mqtt_client = None
 
 # special design for dual-cameras sync
 queueA = queue.Queue()
@@ -274,8 +281,10 @@ def startDualExe(videoAddressA, videoAddressB):
         cv2.imshow("Dual-RTSP", final_concat_img)
         cv2.waitKey(1)
 
-        write_file_json(logPath, fusedResultInfo_A, True)
-        write_file_json(logPath, fusedResultInfo_B, True)
+        json_str_a = write_file_json(logPath, fusedResultInfo_A, True)
+        sendMQTTMessage(global_mqtt_client, json_str_a)
+        json_str_b = write_file_json(logPath, fusedResultInfo_B, True)
+        sendMQTTMessage(global_mqtt_client, json_str_b)
 
     threadA.join()
     threadB.join()
@@ -289,7 +298,10 @@ def startDualExe(videoAddressA, videoAddressB):
 if '__main__' == __name__:
     argv = sys.argv
     argc = len(argv)
-        
+
+    global_mqtt_client = MQTTClient(MQTT_IP_ADDRESS, MQTT_PORT, CLIENT_ID)
+    global_mqtt_client.connect()
+
     if argc == 2:
         addr = argv[1]
         startSingleExe(addr)
