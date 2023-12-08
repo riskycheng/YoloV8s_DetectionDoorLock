@@ -23,6 +23,10 @@ exit_flag = False
 # MQTT related
 MQTT_IP_ADDRESS = '192.168.31.170'
 MQTT_PORT = 1883
+MQTT_TOPIC = 'itvtech/box_open_detection'
+
+ENABLE_MQTT = True
+ENABLE_SAVE_OUT_LOGS = True
 CLIENT_ID = 'BOX_DET_ALGO'
 global_mqtt_client = None
 # default values >>>>>>>>>>>
@@ -64,14 +68,14 @@ def renderCounter(frame):
             cv2.putText(frame, 'Door Open!', textAnchor, cv2.FONT_HERSHEY_COMPLEX, 1.5, (255, 255, 255), 2)
 
 
-def renderDualCounter(frame_a, frame_b):
+def renderDualCounter(frame_a, frame_b, timePast):
     
     # Horizontal concatenation
     result_horizontal = cv2.hconcat([frame_a, frame_b])
     res_h, res_w = result_horizontal.shape[:2]
     res_h = int(res_h / 4)
     res_w = int(res_w / 4)
-    print(res_h, res_w)
+
     result_horizontal = cv2.resize(result_horizontal, (res_w, res_h))
 
     # check the queue
@@ -88,7 +92,10 @@ def renderDualCounter(frame_a, frame_b):
            cv2.rectangle(result_horizontal, (0, res_h - 40), (res_w, res_h), (0, 120, 255), 2)
            textAnchor = (int(res_w / 2) - 60, int(res_h - 10))
            cv2.putText(result_horizontal, 'Door Open!', textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 2)
-        
+
+    textAnchor = (int(res_w) - 150, 20)
+    cv2.putText(result_horizontal, 'Time-past:' + str(timePast), textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.4, (255, 255, 255), 1)
+            
     return result_horizontal
 
 
@@ -131,7 +138,7 @@ def startSingleExe(videoAddress):
         # Update object localizer
         boxes, scores, class_ids = yolov8_detector(frame)
         executedFrameCount += 1
-        print('executed frames:' + str(executedFrameCount))
+        #print('executed frames:' + str(executedFrameCount))
 
         if len(boxes) == 0:
             global_current_continuous_empty_count += 1
@@ -212,7 +219,6 @@ def startDualExe(videoAddressA, videoAddressB):
         # measure queues
         queueA_len = queueA.qsize()
         queueB_len = queueB.qsize()
-        print('queueA_len:%d, queueB_len:%d' %(queueA_len, queueB_len))
 
         if queueA_len > 5 or queueB_len > 5:
             queueA.queue.clear()
@@ -239,7 +245,6 @@ def startDualExe(videoAddressA, videoAddressB):
         combined_img_b = yolov8_detector.draw_detections(frame_b)
 
         executedFrameCount += 1
-        print('executed frames:' + str(executedFrameCount))
         
         if len(boxes_a) == 0 and len(boxes_b) == 0:
             global_current_continuous_empty_count += 1
@@ -281,15 +286,15 @@ def startDualExe(videoAddressA, videoAddressB):
         else:
             global_queue.append(0) # door all close
 
-        final_concat_img = renderDualCounter(combined_img_a, combined_img_b)
+        final_concat_img = renderDualCounter(combined_img_a, combined_img_b, executedFrameCount)
 
         cv2.imshow("Dual-RTSP", final_concat_img)
         cv2.waitKey(1)
 
-        json_str_a = write_file_json(logPath, fusedResultInfo_A, True)
-        sendMQTTMessage(global_mqtt_client, json_str_a)
-        json_str_b = write_file_json(logPath, fusedResultInfo_B, True)
-        sendMQTTMessage(global_mqtt_client, json_str_b)
+        json_str_a = write_file_json(logPath, fusedResultInfo_A, True, writeOut=ENABLE_SAVE_OUT_LOGS)
+        sendMQTTMessage(global_mqtt_client, MQTT_TOPIC, json_str_a, sendOut = ENABLE_MQTT)
+        json_str_b = write_file_json(logPath, fusedResultInfo_B, True, writeOut=ENABLE_SAVE_OUT_LOGS)
+        sendMQTTMessage(global_mqtt_client, MQTT_TOPIC, json_str_b, sendOut = ENABLE_MQTT)
 
     threadA.join()
     threadB.join()
@@ -309,22 +314,29 @@ if '__main__' == __name__:
     # get the configs
     MQTT_IP_ADDRESS = config_manager.get('host_address')
     MQTT_PORT = config_manager.get('host_port')
+    MQTT_TOPIC = config_manager.get('topic')
+    ENABLE_MQTT = config_manager.get('enable_MQTT')
+    ENABLE_SAVE_OUT_LOGS = config_manager.get('save_out_logs')
     RTSP_A = config_manager.get('rtsp_address_a')
     RTSP_B = config_manager.get('rtsp_address_b')
     min_compute_queue_length = config_manager.get('min_compute_queue_length')
     min_scale_factor = config_manager.get('min_scale_factor')
     clear_global_queue_reaching_empty_det_length = config_manager.get('clear_global_queue_reaching_empty_det_length')
     print('Configurated: \n',
-          '\tMQTT-ADDR:%s:%d \n' %(MQTT_IP_ADDRESS, MQTT_PORT),
+          '\tMQTT-ADDR:%s:%d @topic:%s\n' %(MQTT_IP_ADDRESS, MQTT_PORT, MQTT_TOPIC),
           '\tRTSP-A:%s \n' %RTSP_A,
           '\tRTSP-B:%s \n' %RTSP_B,
+          '\tENABLE_MQTT:%s \n' %'True' if ENABLE_MQTT else 'False',
+          '\tENABLE_SAVE_OUT_LOGS:%s \n' %'True' if ENABLE_SAVE_OUT_LOGS else 'False',
           '\tmin_compute_queue_length:%d \n' %min_compute_queue_length,
           '\tmin_scale_factor:%.2f \n' %min_scale_factor,
           '\tclear_global_queue_reaching_empty_det_length:%.2f \n' %clear_global_queue_reaching_empty_det_length)
 
     # start the MQTT connection
-    global_mqtt_client = MQTTClient(MQTT_IP_ADDRESS, MQTT_PORT, CLIENT_ID)
-    global_mqtt_client.connect()
+    if ENABLE_MQTT:
+        global_mqtt_client = MQTTClient(MQTT_IP_ADDRESS, MQTT_PORT, CLIENT_ID)
+        global_mqtt_client.connect()
     
     # start the processing engine
+    print('Start Processing, press \'q\' to exit \n')
     startDualExe(RTSP_A, RTSP_B)

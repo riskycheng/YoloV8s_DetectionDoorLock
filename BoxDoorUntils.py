@@ -40,7 +40,7 @@ def convert_to_python_type(obj):
     else:
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
-def write_file_json(file_path, info, append):
+def write_file_json(file_path, info, append, writeOut = True):
     root = {
         "camera_idx": info.camera_idx,
         "timeStamp": info.timeStamp,
@@ -63,19 +63,21 @@ def write_file_json(file_path, info, append):
     json_data = json.dumps(root, indent=4, default=convert_to_python_type) + "\n"
 
     # Write to file
-    mode = "a" if append else "w"
-    with open(file_path, mode) as file:
-        # Ensure that the new JSON data starts on a new line when appending
-        if append:
-            file.write("\n")
-        file.write(json_data)
+    if write_file_json:
+        mode = "a" if append else "w"
+        with open(file_path, mode) as file:
+            # Ensure that the new JSON data starts on a new line when appending
+            if append:
+                file.write("\n")
+            file.write(json_data)
 
     return json_data
 
 
 
-def sendMQTTMessage(mqtt_client, json_message):
-    topic = 'itvtech/box_open_detection'
+def sendMQTTMessage(mqtt_client, topic, json_message, sendOut = True):
+    if not sendMQTTMessage:
+        return
     if mqtt_client.connected:
         mqtt_client.publish(topic, json_message)
     else:

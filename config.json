@@ -1,6 +1,8 @@
 {
   "host_address": "192.168.31.170",
   "host_port": 1883,
+  "topic": "itvtech/box_open_detection",
+  "enable_MQTT": true,
   "?rtsp_address_a": "rtsp://admin:itv12345@192.168.1.187:554/Streaming/channels/101",
   "rtsp_address_a": "rtsp://127.0.0.1:554/stream",
   "?rtsp_address_b": "rtsp://admin:itv12345@192.168.1.187:554/Streaming/channels/201",
@@ -10,5 +12,6 @@
   "?min_scale_factor": "with min_compute_queue_length, only when the target occupation excceeds this thresh will be voted out",
   "min_scale_factor": 0.6,
   "?clear_global_queue_reaching_empty_det_length": "clear the above queue when reaching continuous empty detections to avoid shaky result",
-  "clear_global_queue_reaching_empty_det_length": 15
+  "clear_global_queue_reaching_empty_det_length": 15,
+  "save_out_logs": true
 }
