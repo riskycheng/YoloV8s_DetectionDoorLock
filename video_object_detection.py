@@ -16,6 +16,10 @@ min_scale_factor = 0.6
 # clear the global queue when continuous frames are empty
 clear_global_queue_reaching_empty_det_length = 15
 global_current_continuous_empty_count = 0
+
+# expect to run N frame / sec
+frames_execute_per_second = 1
+
 global_queue = []
 
 exit_flag = False
@@ -93,8 +97,10 @@ def renderDualCounter(frame_a, frame_b, timePast):
            textAnchor = (int(res_w / 2) - 60, int(res_h - 10))
            cv2.putText(result_horizontal, 'Door Open!', textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 2)
 
-    textAnchor = (int(res_w) - 150, 20)
-    cv2.putText(result_horizontal, 'Time-past:' + str(timePast), textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.4, (255, 255, 255), 1)
+    textAnchor = (int(res_w) - 180, 20)
+
+
+    cv2.putText(result_horizontal, 'Time-past:' + (timePast), textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.4, (255, 255, 255), 1)
             
     return result_horizontal
 
@@ -106,9 +112,6 @@ def startSingleExe(videoAddress):
     yolov8_detector = YOLOv8(model_path, conf_thres=0.5, iou_thres=0.5)
 
     video_fps = cap.get(cv2.CAP_PROP_FPS)
-
-    # tune this value below
-    frames_execute_per_second = 1
 
     # private skipping frequency
     skip_freq = int(video_fps / frames_execute_per_second)
@@ -174,9 +177,6 @@ def startDualExe(videoAddressA, videoAddressB):
     # expect both cameras have the same FPS
     video_fps = capA.get(cv2.CAP_PROP_FPS)
     
-    # tune this value below
-    frames_execute_per_second = 1
-
     # private skipping frequency
     skip_freq = int(video_fps / frames_execute_per_second)
 
@@ -286,7 +286,9 @@ def startDualExe(videoAddressA, videoAddressB):
         else:
             global_queue.append(0) # door all close
 
-        final_concat_img = renderDualCounter(combined_img_a, combined_img_b, executedFrameCount)
+        # calculate the actually past time in seconds
+        pastTime_second = executedFrameCount / frames_execute_per_second
+        final_concat_img = renderDualCounter(combined_img_a, combined_img_b, convert_seconds_to_ddhhmmss(pastTime_second))
 
         cv2.imshow("Dual-RTSP", final_concat_img)
         cv2.waitKey(1)
@@ -319,6 +321,7 @@ if '__main__' == __name__:
     ENABLE_SAVE_OUT_LOGS = config_manager.get('save_out_logs')
     RTSP_A = config_manager.get('rtsp_address_a')
     RTSP_B = config_manager.get('rtsp_address_b')
+    frames_execute_per_second = config_manager.get('frames_execute_per_second')
     min_compute_queue_length = config_manager.get('min_compute_queue_length')
     min_scale_factor = config_manager.get('min_scale_factor')
     clear_global_queue_reaching_empty_det_length = config_manager.get('clear_global_queue_reaching_empty_det_length')
@@ -326,8 +329,9 @@ if '__main__' == __name__:
           '\tMQTT-ADDR:%s:%d @topic:%s\n' %(MQTT_IP_ADDRESS, MQTT_PORT, MQTT_TOPIC),
           '\tRTSP-A:%s \n' %RTSP_A,
           '\tRTSP-B:%s \n' %RTSP_B,
-          '\tENABLE_MQTT:%s \n' %'True' if ENABLE_MQTT else 'False',
-          '\tENABLE_SAVE_OUT_LOGS:%s \n' %'True' if ENABLE_SAVE_OUT_LOGS else 'False',
+          '\tframes_execute_per_second:%d \n' %frames_execute_per_second,
+          '\tENABLE_MQTT:%s \n' %('True' if ENABLE_MQTT else 'False'),
+          '\tENABLE_SAVE_OUT_LOGS:%s \n' %('True' if ENABLE_SAVE_OUT_LOGS else 'False'),
           '\tmin_compute_queue_length:%d \n' %min_compute_queue_length,
           '\tmin_scale_factor:%.2f \n' %min_scale_factor,
           '\tclear_global_queue_reaching_empty_det_length:%.2f \n' %clear_global_queue_reaching_empty_det_length)

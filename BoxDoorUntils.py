@@ -63,7 +63,7 @@ def write_file_json(file_path, info, append, writeOut = True):
     json_data = json.dumps(root, indent=4, default=convert_to_python_type) + "\n"
 
     # Write to file
-    if write_file_json:
+    if writeOut:
         mode = "a" if append else "w"
         with open(file_path, mode) as file:
             # Ensure that the new JSON data starts on a new line when appending
@@ -76,9 +76,16 @@ def write_file_json(file_path, info, append, writeOut = True):
 
 
 def sendMQTTMessage(mqtt_client, topic, json_message, sendOut = True):
-    if not sendMQTTMessage:
+    if not sendOut:
         return
     if mqtt_client.connected:
         mqtt_client.publish(topic, json_message)
     else:
         print('error: mqtt service is not connected!')
+
+def convert_seconds_to_ddhhmmss(seconds):
+    days, remainder = divmod(seconds, 86400)  # 86400 seconds in a day
+    hours, remainder = divmod(remainder, 3600)  # 3600 seconds in an hour
+    minutes, seconds = divmod(remainder, 60)
+
+    return "{:02d}:{:02d}:{:02d}:{:02d}".format(int(days), int(hours), int(minutes), int(seconds))

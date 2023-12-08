@@ -7,11 +7,12 @@
   "rtsp_address_a": "rtsp://127.0.0.1:554/stream",
   "?rtsp_address_b": "rtsp://admin:itv12345@192.168.1.187:554/Streaming/channels/201",
   "rtsp_address_b": "rtsp://127.0.0.1:554/stream2",
+  "frames_execute_per_second": 2,
   "?min_compute_queue_length": "the internal queue used for voting for the most candidate result in one specific length",
-  "min_compute_queue_length": 20,
+  "min_compute_queue_length": 10,
   "?min_scale_factor": "with min_compute_queue_length, only when the target occupation excceeds this thresh will be voted out",
   "min_scale_factor": 0.6,
   "?clear_global_queue_reaching_empty_det_length": "clear the above queue when reaching continuous empty detections to avoid shaky result",
-  "clear_global_queue_reaching_empty_det_length": 15,
-  "save_out_logs": true
+  "clear_global_queue_reaching_empty_det_length": 10,
+  "save_out_logs": false
 }
