@@ -25,9 +25,10 @@ class DoorDetResultInfo:
         self.conf = conf
 
 class FusedResultInfo:
-    def __init__(self, door_info_array=None, camera_idx=None, time_stamp=None):
+    def __init__(self, door_info_array=None, camera_idx=None, url=None, time_stamp=None):
         self.doorInfoArray = door_info_array or [] # array of DoorDetResultInfo
         self.camera_idx = camera_idx
+        self.url = url
         self.timeStamp = time_stamp
 
 
@@ -43,6 +44,7 @@ def convert_to_python_type(obj):
 def write_file_json(file_path, info, append, writeOut = True):
     root = {
         "camera_idx": info.camera_idx,
+        "url": info.url,
         "timeStamp": info.timeStamp,
         "doors": [],
         "anyDoorOpen": any(item.label > 0 for item in info.doorInfoArray)

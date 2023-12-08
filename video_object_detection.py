@@ -1,5 +1,5 @@
 import cv2
-from BoxDoorUntils import *
+from BoxDoorUtils import *
 import os
 from yolov8 import YOLOv8
 import sys, getopt
@@ -231,11 +231,13 @@ def startDualExe(videoAddressA, videoAddressB):
         formatted_time_with_ms = f"{time_str}_{milliseconds:03d}"
         
         fusedResultInfo_A = FusedResultInfo()
-        fusedResultInfo_A.camera_idx = videoAddressA
+        fusedResultInfo_A.camera_idx = 0
+        fusedResultInfo_A.url = videoAddressA
         fusedResultInfo_A.timeStamp = formatted_time_with_ms
         
         fusedResultInfo_B = FusedResultInfo()
-        fusedResultInfo_B.camera_idx = videoAddressB
+        fusedResultInfo_B.camera_idx = 1
+        fusedResultInfo_B.url = videoAddressB
         fusedResultInfo_B.timeStamp = formatted_time_with_ms
 
 
