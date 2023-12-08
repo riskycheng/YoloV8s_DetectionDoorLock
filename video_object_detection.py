@@ -9,7 +9,7 @@ from datetime import datetime
 from MQTTUtils import MQTTClient
 from ConfigManager import ConfigManager
 
-
+VERSION_CODE = '2023.12.08.v0.1'
 # default values >>>>>>>>>>>
 min_compute_queue_length = 20
 min_scale_factor = 0.6
@@ -293,7 +293,7 @@ def startDualExe(videoAddressA, videoAddressB):
         pastTime_second = executedFrameCount / frames_execute_per_second
         final_concat_img = renderDualCounter(combined_img_a, combined_img_b, convert_seconds_to_ddhhmmss(pastTime_second))
 
-        cv2.imshow("Dual-RTSP", final_concat_img)
+        cv2.imshow('Container Door Detection System @itvtech' + VERSION_CODE, final_concat_img)
         cv2.waitKey(1)
 
         json_str_a = write_file_json(logPath, fusedResultInfo_A, True, writeOut=ENABLE_SAVE_OUT_LOGS)
