@@ -8,6 +8,7 @@ import threading
 from datetime import datetime
 from MQTTUtils import MQTTClient
 from ConfigManager import ConfigManager
+from datetime import datetime, timedelta, timezone
 
 VERSION_CODE = '2023.12.08.v0.1'
 # default values >>>>>>>>>>>
@@ -225,11 +226,9 @@ def startDualExe(videoAddressA, videoAddressB):
             queueB.queue.clear()
 
         # Get the current system time
-        current_time = datetime.now()
-        time_str = current_time.strftime("%Y_%m_%d_%H_%M_%S")
-        milliseconds = current_time.microsecond // 1000
-        formatted_time_with_ms = f"{time_str}_{milliseconds:03d}"
-        
+        current_time = datetime.now(timezone(timedelta(hours=8)))  # Assuming UTC+8 timezone
+        formatted_time_with_ms = current_time.isoformat(timespec='milliseconds')
+
         fusedResultInfo_A = FusedResultInfo()
         fusedResultInfo_A.camera_idx = 0
         fusedResultInfo_A.url = videoAddressA
