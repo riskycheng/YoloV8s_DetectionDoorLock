@@ -261,10 +261,10 @@ def startDualExe(videoAddressA, videoAddressB):
             
             # assign to the structured data info
             doorInfo = DoorDetResultInfo()
-            doorInfo.label = class_id
-            doorInfo.conf = score
+            doorInfo.label = int(class_id)
+            doorInfo.conf = float("{:.2f}".format(score))
             # box in xyxy format
-            boxInfo = object_rect(x=box[0], y=box[1], width=box[2] - box[0], height=box[3] - box[1])
+            boxInfo = object_rect(x=int(box[0]), y=int(box[1]), width=int(box[2] - box[0]), height=int(box[3] - box[1]))
             doorInfo.boundingBox = boxInfo
             fusedResultInfo_A.doorInfoArray.append(doorInfo)
         
@@ -274,10 +274,10 @@ def startDualExe(videoAddressA, videoAddressB):
             
             # assign to the structured data info
             doorInfo = DoorDetResultInfo()
-            doorInfo.label = class_id
-            doorInfo.conf = score
+            doorInfo.label = int(class_id)
+            doorInfo.conf = float("{:.2f}".format(score))
             # box in xyxy format
-            boxInfo = object_rect(x=box[0], y=box[1], width=box[2] - box[0], height=box[3] - box[1])
+            boxInfo = object_rect(x=int(box[0]), y=int(box[1]), width=int(box[2] - box[0]), height=int(box[3] - box[1]))
             doorInfo.boundingBox = boxInfo
             fusedResultInfo_B.doorInfoArray.append(doorInfo)
         
