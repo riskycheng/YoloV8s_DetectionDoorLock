@@ -227,15 +227,16 @@ def startDualExe(videoAddressA, videoAddressB):
         # Get the current system time
         current_time = datetime.now()
         time_str = current_time.strftime("%Y_%m_%d_%H_%M_%S")
-
+        milliseconds = current_time.microsecond // 1000
+        formatted_time_with_ms = f"{time_str}_{milliseconds:03d}"
         
         fusedResultInfo_A = FusedResultInfo()
         fusedResultInfo_A.camera_idx = videoAddressA
-        fusedResultInfo_A.timeStamp = time_str
+        fusedResultInfo_A.timeStamp = formatted_time_with_ms
         
         fusedResultInfo_B = FusedResultInfo()
         fusedResultInfo_B.camera_idx = videoAddressB
-        fusedResultInfo_B.timeStamp = time_str
+        fusedResultInfo_B.timeStamp = formatted_time_with_ms
 
 
         # start processing
