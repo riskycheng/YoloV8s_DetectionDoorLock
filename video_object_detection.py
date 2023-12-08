@@ -77,8 +77,8 @@ def renderDualCounter(frame_a, frame_b, timePast):
     # Horizontal concatenation
     result_horizontal = cv2.hconcat([frame_a, frame_b])
     res_h, res_w = result_horizontal.shape[:2]
-    res_h = int(res_h / 4)
-    res_w = int(res_w / 4)
+    res_h = int(res_h / 2)
+    res_w = int(res_w / 2)
 
     result_horizontal = cv2.resize(result_horizontal, (res_w, res_h))
 
@@ -97,10 +97,10 @@ def renderDualCounter(frame_a, frame_b, timePast):
            textAnchor = (int(res_w / 2) - 60, int(res_h - 10))
            cv2.putText(result_horizontal, 'Door Open!', textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 2)
 
-    textAnchor = (int(res_w) - 180, 20)
+    textAnchor = (int(res_w) - 200, 20)
 
-
-    cv2.putText(result_horizontal, 'Time-past:' + (timePast), textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.4, (255, 255, 255), 1)
+    cv2.rectangle(result_horizontal, (int(res_w) - 200, 0), (res_w, 30), (0, 153, 255), -1)
+    cv2.putText(result_horizontal, 'Time-past: ' + (timePast), textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
             
     return result_horizontal
 
