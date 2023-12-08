@@ -1,13 +1,16 @@
 import cv2
 from BoxDoorUntils import *
-
+import os
 from yolov8 import YOLOv8
 import sys, getopt
 import queue
 import threading
 from datetime import datetime
 from MQTTUtils import MQTTClient
+from ConfigManager import ConfigManager
 
+
+# default values >>>>>>>>>>>
 min_compute_queue_length = 20
 min_scale_factor = 0.6
 # clear the global queue when continuous frames are empty
@@ -22,6 +25,8 @@ MQTT_IP_ADDRESS = '192.168.31.170'
 MQTT_PORT = 1883
 CLIENT_ID = 'BOX_DET_ALGO'
 global_mqtt_client = None
+# default values >>>>>>>>>>>
+
 
 # special design for dual-cameras sync
 queueA = queue.Queue()
@@ -219,11 +224,11 @@ def startDualExe(videoAddressA, videoAddressB):
 
         
         fusedResultInfo_A = FusedResultInfo()
-        fusedResultInfo_A.camera_idx = addr1
+        fusedResultInfo_A.camera_idx = videoAddressA
         fusedResultInfo_A.timeStamp = time_str
         
         fusedResultInfo_B = FusedResultInfo()
-        fusedResultInfo_B.camera_idx = addr2
+        fusedResultInfo_B.camera_idx = videoAddressB
         fusedResultInfo_B.timeStamp = time_str
 
 
@@ -293,21 +298,33 @@ def startDualExe(videoAddressA, videoAddressB):
     capB.release()
   
 
-# rtsp://admin:itv12345@192.168.1.187:554/Streaming/channels/101
-# rtsp://admin:itv12345@192.168.1.187:554/Streaming/channels/201
 if '__main__' == __name__:
-    argv = sys.argv
-    argc = len(argv)
 
+    if not os.path.exists('config.json'):
+        print('Error: Please Ensure config.json exist in the same location!')
+        sys.exit(1)
+    
+    config_manager = ConfigManager('config.json')
+    
+    # get the configs
+    MQTT_IP_ADDRESS = config_manager.get('host_address')
+    MQTT_PORT = config_manager.get('host_port')
+    RTSP_A = config_manager.get('rtsp_address_a')
+    RTSP_B = config_manager.get('rtsp_address_b')
+    min_compute_queue_length = config_manager.get('min_compute_queue_length')
+    min_scale_factor = config_manager.get('min_scale_factor')
+    clear_global_queue_reaching_empty_det_length = config_manager.get('clear_global_queue_reaching_empty_det_length')
+    print('Configurated: \n',
+          '\tMQTT-ADDR:%s:%d \n' %(MQTT_IP_ADDRESS, MQTT_PORT),
+          '\tRTSP-A:%s \n' %RTSP_A,
+          '\tRTSP-B:%s \n' %RTSP_B,
+          '\tmin_compute_queue_length:%d \n' %min_compute_queue_length,
+          '\tmin_scale_factor:%.2f \n' %min_scale_factor,
+          '\tclear_global_queue_reaching_empty_det_length:%.2f \n' %clear_global_queue_reaching_empty_det_length)
+
+    # start the MQTT connection
     global_mqtt_client = MQTTClient(MQTT_IP_ADDRESS, MQTT_PORT, CLIENT_ID)
     global_mqtt_client.connect()
-
-    if argc == 2:
-        addr = argv[1]
-        startSingleExe(addr)
-    elif argc == 3:
-        addr1 = argv[1]
-        addr2 = argv[2]
-        startDualExe(addr1, addr2)
-    else:
-        print('python xx.py rtsp-addr or python xx.py rtsp-addr-a rtsp-addr-b')
+    
+    # start the processing engine
+    startDualExe(RTSP_A, RTSP_B)
