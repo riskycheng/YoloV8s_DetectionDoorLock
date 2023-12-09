@@ -172,7 +172,7 @@ def startDualExe(videoAddressA, videoAddressB):
     capA = cv2.VideoCapture(videoAddressA)
     capB = cv2.VideoCapture(videoAddressB)
 
-    model_path = "./models/best.onnx"
+    model_path = "./models/best_yolov8n-sim-fp16.rknn"
     yolov8_detector = YOLOv8(model_path, conf_thres=0.5, iou_thres=0.5)
 
     # expect both cameras have the same FPS
