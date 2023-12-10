@@ -29,15 +29,16 @@ class YOLOv8_RKNN:
         self.rknn.init_runtime()
 
     def detect(self, image):
-        resized_img, ratio, (dw, dh) = self.letterbox(image)  # padding resize
+        #resized_img, ratio, (dw, dh) = self.letterbox(image)  # padding resize
+        resized_img = cv2.resize(image, (model_w, model_h))
         # resized_img = cv2.resize(img, (model_w, model_h), interpolation=cv2.INTER_LINEAR) # direct resize
         input = np.expand_dims(resized_img, axis=0)
 
         outputs = self.rknn.inference(inputs=[input], data_format="nhwc")
 
-        boxes, scores, class_ids, resizedImage = self.postprocess(resized_img, outputs)
+        boxes, scores, class_ids = self.postprocess(image, outputs)
 
-        return boxes, scores, class_ids, resizedImage
+        return boxes, scores, class_ids
 
     def letterbox(self, im, new_shape=(640, 640), color=(114, 114, 114)):
         # Resize and pad image while meeting stride-multiple constraints
@@ -206,38 +207,52 @@ class YOLOv8_RKNN:
             scores.append(scores_[i])
             class_ids.append(class_ids_[i])
 
-        return boxes, scores, class_ids, input_image
+        return boxes, scores, class_ids
 
     def release(self):
         self.rknn.release()
 
 
 if __name__ == "__main__":
-    rknn = YOLOv8_RKNN("../models/best.rknn")
 
-    image = cv2.imread("../models/test_image_3.jpg")
 
-    boxes, scores, class_ids, resizedImage = rknn.detect(image)
+  rknn = YOLOv8_RKNN("../models/best.rknn")
 
-    # Iterate over the selected indices after non-maximum suppression
-    for box, score, class_id in zip(boxes, scores, class_ids):
-        # Pass ratio and padding to draw_detections
-        rknn.draw_detections(resizedImage, box, score, class_id)
+  image = cv2.imread("../models/test_image_3.jpg")
 
-    # 保存结果
-    cv2.imwrite("../models/test_image_3_res.jpg", resizedImage)
+  boxes, scores, class_ids = rknn.detect(image)
 
-    image = cv2.imread("../models/test_image_2.jpg")
+  # Iterate over the selected indices after non-maximum suppression
+  for box, score, class_id in zip(boxes, scores, class_ids):
+    # Pass ratio and padding to draw_detections
+    rknn.draw_detections(image, box, score, class_id)
 
-    boxes, scores, class_ids, resizedImage = rknn.detect(image)
+  # 保存结果
+  cv2.imwrite("../models/test_image_3_res.jpg", image)
 
-    # Iterate over the selected indices after non-maximum suppression
-    for box, score, class_id in zip(boxes, scores, class_ids):
-        # Pass ratio and padding to draw_detections
-        rknn.draw_detections(resizedImage, box, score, class_id)
+  image = cv2.imread("../models/test_image_2.jpg")
 
-    # 保存结果
-    cv2.imwrite("../models/test_image_2_res.jpg", resizedImage)
+  boxes, scores, class_ids = rknn.detect(image)
 
-    # 释放
-    rknn.release()
+  # Iterate over the selected indices after non-maximum suppression
+  for box, score, class_id in zip(boxes, scores, class_ids):
+    # Pass ratio and padding to draw_detections
+    rknn.draw_detections(image, box, score, class_id)
+
+  # 保存结果
+  cv2.imwrite("../models/test_image_2_res.jpg", image)
+
+  image = cv2.imread("../models/test_image_4.jpg")
+
+  boxes, scores, class_ids = rknn.detect(image)
+
+  # Iterate over the selected indices after non-maximum suppression
+  for box, score, class_id in zip(boxes, scores, class_ids):
+    # Pass ratio and padding to draw_detections
+    rknn.draw_detections(image, box, score, class_id)
+
+  # 保存结果
+  cv2.imwrite("../models/test_image_4_res.jpg", image)
+
+  # 释放
+  rknn.release()
