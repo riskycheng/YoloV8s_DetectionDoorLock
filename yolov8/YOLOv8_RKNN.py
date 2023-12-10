@@ -27,6 +27,9 @@ class YOLOv8_RKNN:
         self.rknn = RKNN(verbose=True)
         self.rknn.load_rknn(path)
         self.rknn.init_runtime()
+    
+    def __call__(self, image):
+        return self.detect(image)
 
     def detect(self, image):
         # resized_img, ratio, (dw, dh) = self.letterbox(image)  # padding resize
@@ -66,7 +69,16 @@ class YOLOv8_RKNN:
         )  # add border
         return im, ratio, (dw, dh)
 
-    def draw_detections(self, img, box, score, class_id):
+    def draw_detections(self, image):
+        boxes = self.boxes
+        scores = self.scores
+        class_ids = self.class_ids
+         # Iterate over the selected indices after non-maximum suppression
+        for box, score, class_id in zip(boxes, scores, class_ids):
+            # Pass ratio and padding to draw_detections
+            self.draw_detection(image, box, score, class_id)
+
+    def draw_detection(self, img, box, score, class_id):
         """
         Draws bounding boxes and labels on the input image based on the detected objects.
 
@@ -207,6 +219,9 @@ class YOLOv8_RKNN:
             scores.append(scores_[i])
             class_ids.append(class_ids_[i])
 
+        self.boxes = boxes
+        self.scores = scores
+        self.class_ids = class_ids
         return boxes, scores, class_ids
 
     def release(self):
@@ -218,39 +233,12 @@ if __name__ == "__main__":
 
     image = cv2.imread("../models/test_image_3.jpg")
 
-    boxes, scores, class_ids = rknn.detect(image)
+    boxes, scores, class_ids = rknn(image)
 
-    # Iterate over the selected indices after non-maximum suppression
-    for box, score, class_id in zip(boxes, scores, class_ids):
-        # Pass ratio and padding to draw_detections
-        rknn.draw_detections(image, box, score, class_id)
-
+    rknn.draw_detections(image)
+   
     # 保存结果
     cv2.imwrite("../models/test_image_3_res.jpg", image)
-
-    image = cv2.imread("../models/test_image_2.jpg")
-
-    boxes, scores, class_ids = rknn.detect(image)
-
-    # Iterate over the selected indices after non-maximum suppression
-    for box, score, class_id in zip(boxes, scores, class_ids):
-        # Pass ratio and padding to draw_detections
-        rknn.draw_detections(image, box, score, class_id)
-
-    # 保存结果
-    cv2.imwrite("../models/test_image_2_res.jpg", image)
-
-    image = cv2.imread("../models/test_image_4.jpg")
-
-    boxes, scores, class_ids = rknn.detect(image)
-
-    # Iterate over the selected indices after non-maximum suppression
-    for box, score, class_id in zip(boxes, scores, class_ids):
-        # Pass ratio and padding to draw_detections
-        rknn.draw_detections(image, box, score, class_id)
-
-    # 保存结果
-    cv2.imwrite("../models/test_image_4_res.jpg", image)
 
     # 释放
     rknn.release()

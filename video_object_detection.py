@@ -2,6 +2,7 @@ import cv2
 from BoxDoorUtils import *
 import os
 from yolov8 import YOLOv8
+from yolov8.YOLOv8_RKNN import YOLOv8_RKNN
 import sys, getopt
 import queue
 import threading
@@ -165,16 +166,19 @@ def startSingleExe(videoAddress):
 
 
 
-def startDualExe(videoAddressA, videoAddressB):
+def startDualExe(videoAddressA, videoAddressB, runNPU=True):
     global global_current_continuous_empty_count, exit_flag
     
     # dual cameras
     capA = cv2.VideoCapture(videoAddressA)
     capB = cv2.VideoCapture(videoAddressB)
 
-    model_path = "./models/best_yolov8n-sim-fp16.rknn"
-    yolov8_detector = YOLOv8(model_path, conf_thres=0.5, iou_thres=0.5)
-
+    rknn_model_path = "./models/best.rknn"
+    onnx_model_path = './models/best.onnx'
+    if runNPU:
+        yolov8_detector = YOLOv8_RKNN(rknn_model_path, conf_thres=0.5, iou_thres=0.5)
+    else:
+        yolov8_detector = YOLOv8(onnx_model_path, conf_thres=0.5, iou_thres=0.5)
     # expect both cameras have the same FPS
     video_fps = capA.get(cv2.CAP_PROP_FPS)
     
@@ -316,6 +320,7 @@ if '__main__' == __name__:
     config_manager = ConfigManager('config.json')
     
     # get the configs
+    RUN_ON_NPU = config_manager.get('run_on_npu')
     MQTT_IP_ADDRESS = config_manager.get('host_address')
     MQTT_PORT = config_manager.get('host_port')
     MQTT_TOPIC = config_manager.get('topic')
@@ -328,6 +333,7 @@ if '__main__' == __name__:
     min_scale_factor = config_manager.get('min_scale_factor')
     clear_global_queue_reaching_empty_det_length = config_manager.get('clear_global_queue_reaching_empty_det_length')
     print('Configurated: \n',
+          '\tRUN_ON_NPU:%s \n' %('NPU' if RUN_ON_NPU else 'CPU'),
           '\tMQTT-ADDR:%s:%d @topic:%s\n' %(MQTT_IP_ADDRESS, MQTT_PORT, MQTT_TOPIC),
           '\tRTSP-A:%s \n' %RTSP_A,
           '\tRTSP-B:%s \n' %RTSP_B,
@@ -345,4 +351,4 @@ if '__main__' == __name__:
     
     # start the processing engine
     print('Start Processing, press \'q\' to exit \n')
-    startDualExe(RTSP_A, RTSP_B)
+    startDualExe(RTSP_A, RTSP_B, RUN_ON_NPU)
