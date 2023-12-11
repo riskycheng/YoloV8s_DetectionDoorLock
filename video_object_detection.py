@@ -78,6 +78,9 @@ def renderDualCounter(frame_a, frame_b, timePast):
     
     # Horizontal concatenation
     result_horizontal = cv2.hconcat([frame_a, frame_b])
+    if result_horizontal is None:
+        print('error: result_horizontal is none')
+        return
     res_h, res_w = result_horizontal.shape[:2]
     res_h = int(res_h / 2)
     res_w = int(res_w / 2)
@@ -295,7 +298,9 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
         # calculate the actually past time in seconds
         pastTime_second = executedFrameCount / frames_execute_per_second
         final_concat_img = renderDualCounter(combined_img_a, combined_img_b, convert_seconds_to_ddhhmmss(pastTime_second))
-
+        if final_concat_img is None:
+            print('error: final_concat_img is none')
+            continue
         cv2.imshow('Container Door Detection System @itvtech' + VERSION_CODE, final_concat_img)
         cv2.waitKey(1)
 

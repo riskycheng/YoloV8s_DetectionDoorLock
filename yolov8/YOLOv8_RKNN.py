@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+import time
 # from rknn.api import RKNN
 from rknnlite.api import RKNNLite as RKNN
 
@@ -24,7 +24,7 @@ class YOLOv8_RKNN:
         self.conf_threshold = conf_thres
         self.iou_threshold = iou_thres
 
-        self.rknn = RKNN(verbose=True)
+        self.rknn = RKNN(verbose=False)
         self.rknn.load_rknn(path)
         self.rknn.init_runtime()
     
@@ -36,10 +36,11 @@ class YOLOv8_RKNN:
         resized_img = cv2.resize(image, (model_w, model_h))
         # resized_img = cv2.resize(img, (model_w, model_h), interpolation=cv2.INTER_LINEAR) # direct resize
         input = np.expand_dims(resized_img, axis=0)
-
+        start = time.perf_counter()
         outputs = self.rknn.inference(inputs=[input], data_format="nhwc")
 
         boxes, scores, class_ids = self.postprocess(image, outputs)
+        print(f"Inference time: {(time.perf_counter() - start)*1000:.2f} ms")
 
         return boxes, scores, class_ids
 
@@ -77,6 +78,7 @@ class YOLOv8_RKNN:
         for box, score, class_id in zip(boxes, scores, class_ids):
             # Pass ratio and padding to draw_detections
             self.draw_detection(image, box, score, class_id)
+        return image
 
     def draw_detection(self, img, box, score, class_id):
         """
