@@ -12,7 +12,10 @@ objectThresh = 0.5
 model_h = 640
 model_w = 640
 
-color_palette = np.random.uniform(0, 255, size=(len(CLASSES), 3))
+color_palette = [
+    (0, 255, 0),  # Green for class "box"
+    (255, 0, 0)   # Red for class "box_open"
+]
 
 
 def sigmoid(x):
