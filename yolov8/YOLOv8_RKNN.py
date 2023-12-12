@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import time
+from yolov8.utils import draw_detections
 # from rknn.api import RKNN
 from rknnlite.api import RKNNLite as RKNN
 
@@ -74,14 +75,7 @@ class YOLOv8_RKNN:
         return im, ratio, (dw, dh)
 
     def draw_detections(self, image):
-        boxes = self.boxes
-        scores = self.scores
-        class_ids = self.class_ids
-         # Iterate over the selected indices after non-maximum suppression
-        for box, score, class_id in zip(boxes, scores, class_ids):
-            # Pass ratio and padding to draw_detections
-            self.draw_detection(image, box, score, class_id)
-        return image
+       return draw_detections(image, self.boxes, self.scores,self.class_ids, mask_alpha=0.4)
 
     def draw_detection(self, img, box, score, class_id):
         """
