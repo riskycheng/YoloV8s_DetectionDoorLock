@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import time
-from utils import draw_detections
+from yolov8.utils import draw_detections
 # from rknn.api import RKNN
 from rknnlite.api import RKNNLite as RKNN
 
@@ -15,7 +15,7 @@ model_w = 640
 
 color_palette = [
     (0, 255, 0),  # Green for class "box"
-    (255, 0, 0)   # Red for class "box_open"
+    (0, 0, 255)   # Red for class "box_open"
 ]
 
 
@@ -164,10 +164,6 @@ class YOLOv8_RKNN:
         scores = scores[sorted_indices]
         class_ids = class_ids[sorted_indices]
 
-        print(boxes)
-        print(scores)
-        print(class_ids)
-
         # Get the number of rows in the outputs array
         rows = boxes.shape[0]
 
@@ -191,7 +187,7 @@ class YOLOv8_RKNN:
             # If the maximum score is above the confidence threshold
             if max_score >= objectThresh:
                 # Get the class ID with the highest score
-                class_id = np.argmax(classes_scores)
+                class_id = class_ids[i]
 
                 # Extract the bounding box coordinates from the current row
                 x, y, w, h = boxes[i]
@@ -206,10 +202,6 @@ class YOLOv8_RKNN:
                 class_ids_.append(class_id)
                 scores_.append(max_score)
                 boxes_.append([left, top, width, height])
-
-        print(boxes_)
-        print(scores_)
-        print(class_ids_)
 
         # Apply non-maximum suppression to filter out overlapping bounding boxes
         indices = cv2.dnn.NMSBoxes(
