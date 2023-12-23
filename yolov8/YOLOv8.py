@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import onnxruntime
 
-from yolov8.utils import xywh2xyxy, draw_detections, multiclass_nms
+from utils import xywh2xyxy, draw_detections, multiclass_nms
 
 
 class YOLOv8:
@@ -56,7 +56,7 @@ class YOLOv8:
         start = time.perf_counter()
         outputs = self.session.run(self.output_names, {self.input_names[0]: input_tensor})
 
-        # print(f"Inference time: {(time.perf_counter() - start)*1000:.2f} ms")
+        print(f"Inference time: {(time.perf_counter() - start)*1000:.2f} ms")
         return outputs
 
     def process_output(self, output):
@@ -121,21 +121,13 @@ class YOLOv8:
 
 
 if __name__ == '__main__':
-    from imread_from_url import imread_from_url
+    detector = YOLOv8("../models/best.onnx")
 
-    model_path = "../models/yolov8m.onnx"
+    image = cv2.imread("../models/test_image_06.jpg")
 
-    # Initialize YOLOv8 object detector
-    yolov8_detector = YOLOv8(model_path, conf_thres=0.3, iou_thres=0.5)
+    boxes, scores, class_ids = detector(image)
 
-    img_url = "https://live.staticflickr.com/13/19041780_d6fd803de0_3k.jpg"
-    img = imread_from_url(img_url)
-
-    # Detect Objects
-    yolov8_detector(img)
-
-    # Draw detections
-    combined_img = yolov8_detector.draw_detections(img)
-    cv2.namedWindow("Output", cv2.WINDOW_NORMAL)
-    cv2.imshow("Output", combined_img)
-    cv2.waitKey(0)
+    test = detector.draw_detections(image)
+   
+    # 保存结果
+    cv2.imwrite("../models/test_image_06_res.jpg", test)

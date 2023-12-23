@@ -1,11 +1,11 @@
 import cv2
 import numpy as np
 import time
-from yolov8.utils import draw_detections
+from utils import draw_detections
 # from rknn.api import RKNN
 from rknnlite.api import RKNNLite as RKNN
 
-CLASSES = {0: "box", 1: "box_open"}
+CLASSES = {0: "doorClose", 1: "doorOpen"}
 
 nmsThresh = 0.45
 objectThresh = 0.5
@@ -75,7 +75,15 @@ class YOLOv8_RKNN:
         return im, ratio, (dw, dh)
 
     def draw_detections(self, image):
-       return draw_detections(image, self.boxes, self.scores,self.class_ids, mask_alpha=0.4)
+        boxes = self.boxes
+        scores = self.scores
+        class_ids = self.class_ids
+         # Iterate over the selected indices after non-maximum suppression
+        for box, score, class_id in zip(boxes, scores, class_ids):
+            # Pass ratio and padding to draw_detections
+            self.draw_detection(image, box, score, class_id)
+        return image
+    
 
     def draw_detection(self, img, box, score, class_id):
         """
@@ -230,14 +238,14 @@ class YOLOv8_RKNN:
 if __name__ == "__main__":
     rknn = YOLOv8_RKNN("../models/best.rknn")
 
-    image = cv2.imread("../models/test_image_3.jpg")
+    image = cv2.imread("../models/test_image_06.jpg")
 
     boxes, scores, class_ids = rknn(image)
 
     rknn.draw_detections(image)
    
     # 保存结果
-    cv2.imwrite("../models/test_image_3_res.jpg", image)
+    cv2.imwrite("../models/test_image_06_res.jpg", image)
 
     # 释放
     rknn.release()
