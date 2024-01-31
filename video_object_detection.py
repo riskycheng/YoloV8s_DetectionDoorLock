@@ -19,7 +19,7 @@ min_scale_factor = 0.6
 # clear the global queue when continuous frames are empty
 clear_global_queue_reaching_empty_det_length = 15
 global_current_continuous_empty_count = 0
-
+showUI = True
 # expect to run N frame / sec
 frames_execute_per_second = 1
 
@@ -180,7 +180,7 @@ def startSingleExe(videoAddress):
 
 
 def startDualExe(videoAddressA, videoAddressB, runNPU=True):
-    global global_current_continuous_empty_count, exit_flag
+    global global_current_continuous_empty_count, exit_flag, showUI
     
     # dual cameras
     capA = cv2.VideoCapture(videoAddressA)
@@ -311,8 +311,9 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
         if final_concat_img is None:
             print('error: final_concat_img is none')
             continue
-        cv2.imshow('Container Door Detection System @itvtech' + VERSION_CODE, final_concat_img)
-        cv2.waitKey(1)
+        if showUI:
+            cv2.imshow('Container Door Detection System @itvtech' + VERSION_CODE, final_concat_img)
+            cv2.waitKey(1)
 
         json_str_a = write_file_json(logPath, fusedResultInfo_A, True, writeOut=ENABLE_SAVE_OUT_LOGS)
         sendMQTTMessage(global_mqtt_client, MQTT_TOPIC, json_str_a, sendOut = ENABLE_MQTT)
@@ -347,6 +348,7 @@ if '__main__' == __name__:
     min_compute_queue_length = config_manager.get('min_compute_queue_length')
     min_scale_factor = config_manager.get('min_scale_factor')
     clear_global_queue_reaching_empty_det_length = config_manager.get('clear_global_queue_reaching_empty_det_length')
+    showUI = config_manager.get('showUI')
     print('Configurated: \n',
           '\tRUN_ON_NPU:%s \n' %('NPU' if RUN_ON_NPU else 'CPU'),
           '\tMQTT-ADDR:%s:%d @topic:%s\n' %(MQTT_IP_ADDRESS, MQTT_PORT, MQTT_TOPIC),
@@ -357,7 +359,9 @@ if '__main__' == __name__:
           '\tENABLE_SAVE_OUT_LOGS:%s \n' %('True' if ENABLE_SAVE_OUT_LOGS else 'False'),
           '\tmin_compute_queue_length:%d \n' %min_compute_queue_length,
           '\tmin_scale_factor:%.2f \n' %min_scale_factor,
-          '\tclear_global_queue_reaching_empty_det_length:%.2f \n' %clear_global_queue_reaching_empty_det_length)
+          '\tclear_global_queue_reaching_empty_det_length:%.2f \n' %clear_global_queue_reaching_empty_det_length,
+          '\tshowUI:%s \n' %('True' if showUI else 'False'),
+          )
 
     # start the MQTT connection
     if ENABLE_MQTT:
