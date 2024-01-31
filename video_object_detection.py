@@ -10,6 +10,7 @@ from datetime import datetime
 from MQTTUtils import MQTTClient
 from ConfigManager import ConfigManager
 from datetime import datetime, timedelta, timezone
+import time
 
 VERSION_CODE = '2023.12.08.v0.1'
 # default values >>>>>>>>>>>
@@ -45,12 +46,21 @@ queueB = queue.Queue()
 frames_ready_event = threading.Event()
 
 # basic function used for caching frame into queue
-def capture_frames(cap, frame_queue):
-    while cap.isOpened():
+def capture_frames(cap, frame_queue, videoAddress):
+    
+    while True:
+        if not cap.isOpened():
+            print('camera is not opened, retry after 2 seconds...')
+            cap.release()
+            time.sleep(2)
+            cap = cv2.VideoCapture(videoAddress)
+            continue
         try:
             ret, frame = cap.read()
             if not ret or exit_flag:
-                break
+                print('frame not available, waiting for camera...')
+                cap.release()
+                continue
             frame_queue.put(frame)
             frames_ready_event.set()  # Signal that a frame is ready
         except Exception as e:
@@ -204,8 +214,8 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
     logPath = './log_' + time_str + '.txt'
 
     # Start separate threads to capture frames for each RTSP stream
-    threadA = threading.Thread(target=capture_frames, args=(capA, queueA))
-    threadB = threading.Thread(target=capture_frames, args=(capB, queueB))
+    threadA = threading.Thread(target=capture_frames, args=(capA, queueA, videoAddressA))
+    threadB = threading.Thread(target=capture_frames, args=(capB, queueB, videoAddressB))
     threadA.start()
     threadB.start()
 
