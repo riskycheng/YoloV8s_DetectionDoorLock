@@ -348,7 +348,7 @@ if '__main__' == __name__:
     min_compute_queue_length = config_manager.get('min_compute_queue_length')
     min_scale_factor = config_manager.get('min_scale_factor')
     clear_global_queue_reaching_empty_det_length = config_manager.get('clear_global_queue_reaching_empty_det_length')
-    showUI = config_manager.get('showUI')
+    showUI = config_manager.get('show_UI')
     print('Configurated: \n',
           '\tRUN_ON_NPU:%s \n' %('NPU' if RUN_ON_NPU else 'CPU'),
           '\tMQTT-ADDR:%s:%d @topic:%s\n' %(MQTT_IP_ADDRESS, MQTT_PORT, MQTT_TOPIC),

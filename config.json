@@ -17,5 +17,5 @@
   "?clear_global_queue_reaching_empty_det_length": "clear the above queue when reaching continuous empty detections to avoid shaky result",
   "clear_global_queue_reaching_empty_det_length": 10,
   "save_out_logs": true,
-  "show_UI": false
+  "show_UI": true
 }
