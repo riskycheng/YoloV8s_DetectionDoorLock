@@ -12,7 +12,7 @@ from ConfigManager import ConfigManager
 from datetime import datetime, timedelta, timezone
 import time
 
-VERSION_CODE = '2023.12.08.v0.1'
+VERSION_CODE = '2024.03.08.v0.3'
 # default values >>>>>>>>>>>
 min_compute_queue_length = 20
 min_scale_factor = 0.6
