@@ -6,7 +6,7 @@ class MQTTClient:
         self.port = port
         self.client_id = client_id
         self.connected = False
-        self.client = mqtt.Client(client_id)
+        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id)
 
         # Set up the callback functions
         self.client.on_connect = self.on_connect
