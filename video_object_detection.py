@@ -46,8 +46,9 @@ queueB = queue.Queue()
 frames_ready_event = threading.Event()
 
 # basic function used for caching frame into queue
-def capture_frames(cap, frame_queue, videoAddress):
+def capture_frames(cap, frame_queue, videoAddress, skip_freq):
     
+    frameIndex = 0    
     while True:
         if not cap.isOpened():
             print('camera is not opened, retry after 2 seconds...')
@@ -61,6 +62,12 @@ def capture_frames(cap, frame_queue, videoAddress):
                 print('frame not available, waiting for camera...')
                 cap.release()
                 continue
+            frameIndex += 1
+            # print('frameIndex:%d / skip_freq:%d'  %(frameIndex, skip_freq))
+            # skip if it is not hitting the tag   
+            if frameIndex % skip_freq != 0:
+                continue
+
             frame_queue.put(frame)
             frames_ready_event.set()  # Signal that a frame is ready
         except Exception as e:
@@ -128,6 +135,10 @@ def startSingleExe(videoAddress):
 
     video_fps = cap.get(cv2.CAP_PROP_FPS)
 
+    # this is dirty since the queried FPS doesnot match the actual running FPS
+    if video_fps > 30:
+        video_fps = 25
+
     # private skipping frequency
     skip_freq = int(video_fps / frames_execute_per_second)
 
@@ -186,21 +197,24 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
     capA = cv2.VideoCapture(videoAddressA)
     capB = cv2.VideoCapture(videoAddressB)
 
+    # expect both cameras have the same FPS
+    video_fps = capA.get(cv2.CAP_PROP_FPS)
+
+    if video_fps > 30:
+        video_fps = 25
+
+    # private skipping frequency
+    skip_freq = int(video_fps / frames_execute_per_second)
+    print('video fps :' + str(video_fps) + ' skip_freq : ' + str(skip_freq))
+
+
     rknn_model_path = "./models/best.rknn"
     onnx_model_path = './models/best.onnx'
     if runNPU:
         yolov8_detector = YOLOv8_RKNN(rknn_model_path, conf_thres=0.5, iou_thres=0.5)
     else:
         yolov8_detector = YOLOv8(onnx_model_path, conf_thres=0.5, iou_thres=0.5)
-    # expect both cameras have the same FPS
-    video_fps = capA.get(cv2.CAP_PROP_FPS)
-    
-    # private skipping frequency
-    skip_freq = int(video_fps / frames_execute_per_second)
 
-    print('video fps :' + str(video_fps) + ' skip_freq : ' + str(skip_freq))
-
-    frameIndex = 0
     executedFrameCount = 0
 
     if not capA.isOpened() or not capB.isOpened():
@@ -214,8 +228,8 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
     logPath = './log_' + time_str + '.txt'
 
     # Start separate threads to capture frames for each RTSP stream
-    threadA = threading.Thread(target=capture_frames, args=(capA, queueA, videoAddressA))
-    threadB = threading.Thread(target=capture_frames, args=(capB, queueB, videoAddressB))
+    threadA = threading.Thread(target=capture_frames, args=(capA, queueA, videoAddressA, video_fps))
+    threadB = threading.Thread(target=capture_frames, args=(capB, queueB, videoAddressB, video_fps))
     threadA.start()
     threadB.start()
 
@@ -230,9 +244,6 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
         frame_a = queueA.get()
         frame_b = queueB.get()
         frames_ready_event.clear()  # Reset the event
-        frameIndex += 1
-        if frameIndex % skip_freq != 0:
-            continue
 
         # measure queues
         queueA_len = queueA.qsize()
