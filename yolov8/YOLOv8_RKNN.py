@@ -113,7 +113,7 @@ class YOLOv8_RKNN:
 
         # Calculate the dimensions of the label text
         (label_width, label_height), _ = cv2.getTextSize(
-            label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
+            label, cv2.FONT_HERSHEY_SIMPLEX, 1, 1
         )
 
         # Calculate the position of the label text
@@ -135,9 +135,9 @@ class YOLOv8_RKNN:
             label,
             (label_x, label_y),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            (0, 0, 0),
-            1,
+            1.0,
+            (255, 255, 255),
+            2,
             cv2.LINE_AA,
         )
 
