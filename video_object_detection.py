@@ -46,12 +46,22 @@ queueB = queue.Queue()
 frames_ready_event = threading.Event()
 
 # basic function used for caching frame into queue
-def capture_frames(cap, frame_queue, videoAddress, skip_freq):
+def capture_frames(cap, frame_queue, videoAddress, skip_freq, camID = 0, logPath = None):
     
     frameIndex = 0    
     while True:
         if not cap.isOpened():
             print('camera is not opened, retry after 2 seconds...')
+
+            # write it out
+            fusedResultInfo = FusedResultInfo()
+            fusedResultInfo.camera_idx = camID
+            fusedResultInfo.url = videoAddress
+            fusedResultInfo.timeStamp = 'offline'
+            
+            json_str_a = write_file_json(logPath, fusedResultInfo, True, writeOut=ENABLE_SAVE_OUT_LOGS)
+            sendMQTTMessage(global_mqtt_client, MQTT_TOPIC, json_str_a, sendOut = ENABLE_MQTT)
+
             cap.release()
             time.sleep(2)
             cap = cv2.VideoCapture(videoAddress)
@@ -228,8 +238,8 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
     logPath = './log_' + time_str + '.txt'
 
     # Start separate threads to capture frames for each RTSP stream
-    threadA = threading.Thread(target=capture_frames, args=(capA, queueA, videoAddressA, video_fps))
-    threadB = threading.Thread(target=capture_frames, args=(capB, queueB, videoAddressB, video_fps))
+    threadA = threading.Thread(target=capture_frames, args=(capA, queueA, videoAddressA, video_fps, 0, logPath))
+    threadB = threading.Thread(target=capture_frames, args=(capB, queueB, videoAddressB, video_fps, 1, logPath))
     threadA.start()
     threadB.start()
 
