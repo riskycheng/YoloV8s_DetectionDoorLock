@@ -74,18 +74,18 @@ class YOLOv8_RKNN:
         )  # add border
         return im, ratio, (dw, dh)
 
-    def draw_detections(self, image):
+    def draw_detections(self, image, timeStamp = None):
         boxes = self.boxes
         scores = self.scores
         class_ids = self.class_ids
          # Iterate over the selected indices after non-maximum suppression
         for box, score, class_id in zip(boxes, scores, class_ids):
             # Pass ratio and padding to draw_detections
-            self.draw_detection(image, box, score, class_id)
+            self.draw_detection(image, box, score, class_id, timeStamp)
         return image
     
 
-    def draw_detection(self, img, box, score, class_id):
+    def draw_detection(self, img, box, score, class_id, time_stamp):
         """
         Draws bounding boxes and labels on the input image based on the detected objects.
 
@@ -94,6 +94,7 @@ class YOLOv8_RKNN:
             box: Detected bounding box.
             score: Corresponding detection score.
             class_id: Class ID for the detected object.
+            time_stamp : stands for the current time it happens
 
         Returns:
             None
@@ -140,6 +141,37 @@ class YOLOv8_RKNN:
             2,
             cv2.LINE_AA,
         )
+
+        # draw the rect for the timeStamp
+        if time_stamp is not None:
+            # Calculate the position of the label text
+            label_x = x1
+            label_y = (y1 + h) + label_height
+
+            # Calculate the dimensions of the label text
+            (label_width, label_height), _ = cv2.getTextSize(
+                time_stamp, cv2.FONT_HERSHEY_SIMPLEX, 1, 1)
+            # Draw a filled rectangle as the background for the label text
+            cv2.rectangle(
+                img,
+                (label_x, label_y - label_height),
+                (label_x + label_width, label_y + label_height),
+                color,
+                cv2.FILLED,
+            )
+
+            # draw the label text on the image standing for the timeStamp
+            cv2.putText(
+                img,
+                time_stamp,
+                (label_x, label_y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1.0,
+                (255, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
+
 
     def postprocess(self, input_image, outputs):
         img_h, img_w = input_image.shape[:2]

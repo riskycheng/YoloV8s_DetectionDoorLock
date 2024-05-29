@@ -12,7 +12,7 @@ from ConfigManager import ConfigManager
 from datetime import datetime, timedelta, timezone
 import time
 
-VERSION_CODE = '2024.03.08.v0.3'
+VERSION_CODE = '2024.05.29.v1.4'
 # default values >>>>>>>>>>>
 min_compute_queue_length = 20
 min_scale_factor = 0.6
@@ -129,10 +129,15 @@ def renderDualCounter(frame_a, frame_b, timePast):
            textAnchor = (int(res_w / 2) - 60, int(res_h - 10))
            cv2.putText(result_horizontal, 'Door Open!', textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 2)
 
-    textAnchor = (int(res_w) - 200, 20)
+    timePastTxt = 'Time-past: ' + (timePast)
+    (label_width, label_height), _ = cv2.getTextSize(
+                timePastTxt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+    
+    cv2.rectangle(result_horizontal, (0, 0), (6 + label_width, 6 + label_height), (0, 153, 255), -1)
+    
+    textAnchor = (0, 0 + label_height)
 
-    cv2.rectangle(result_horizontal, (int(res_w) - 200, 0), (res_w, 30), (0, 153, 255), -1)
-    cv2.putText(result_horizontal, 'Time-past: ' + (timePast), textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
+    cv2.putText(result_horizontal, timePastTxt, textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
             
     return result_horizontal
 
@@ -280,8 +285,14 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
 
         # start processing
         boxes_a, scores_a, class_ids_a = yolov8_detector(frame_a)
+        # show Box with TimeStamp 
+        # combined_img_a = yolov8_detector.draw_detections(frame_a, formatted_time_with_ms)
+        # show Box without TimeStamp 
         combined_img_a = yolov8_detector.draw_detections(frame_a)
         boxes_b, scores_b, class_ids_b = yolov8_detector(frame_b)
+        # show Box with TimeStamp 
+        # combined_img_b = yolov8_detector.draw_detections(frame_b, formatted_time_with_ms)
+        # show Box without TimeStamp 
         combined_img_b = yolov8_detector.draw_detections(frame_b)
 
         executedFrameCount += 1
@@ -329,6 +340,32 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
         # calculate the actually past time in seconds
         pastTime_second = executedFrameCount / frames_execute_per_second
         final_concat_img = renderDualCounter(combined_img_a, combined_img_b, convert_seconds_to_ddhhmmss(pastTime_second))
+
+        # add timeStamp in the left bottom region
+        timeStampTxt = formatted_time_with_ms
+        # Calculate the dimensions of the label text
+        (timeStampTxt_width, timeStampTxt_height), _ = cv2.getTextSize(timeStampTxt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        final_concat_img_height, final_concat_img_width = final_concat_img.shape[:2]
+        # Draw a filled rectangle as the background for the label text
+        cv2.rectangle(
+            final_concat_img,
+            (0, final_concat_img_height - 50 - timeStampTxt_height),
+            (timeStampTxt_width, final_concat_img_height - 50),
+            (0, 0, 255),
+            cv2.FILLED,
+        )
+        # draw the label text on the image standing for the timeStamp
+        cv2.putText(
+            final_concat_img,
+            timeStampTxt,
+            (0, final_concat_img_height - 50),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA,
+            )
+        
         if final_concat_img is None:
             print('error: final_concat_img is none')
             continue
