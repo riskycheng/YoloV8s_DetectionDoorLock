@@ -1,13 +1,13 @@
 import cv2
 import numpy as np
 import time
-from yolov8.utils import draw_detections
+# from yolov8.utils import draw_detections
 # from rknn.api import RKNN
 from rknnlite.api import RKNNLite as RKNN
 
 CLASSES = {0: "door_half_close", 1: "door_close", 2: "door_open"}
 
-nmsThresh = 0.1
+nmsThresh = 0.4
 objectThresh = 0.2
 
 model_h = 640
@@ -263,14 +263,14 @@ class YOLOv8_RKNN:
 if __name__ == "__main__":
     rknn = YOLOv8_RKNN("../models/best.rknn")
 
-    image = cv2.imread("../models/test_image_06.jpg")
+    image = cv2.imread("../test_data/test_image_06.jpg")
 
     boxes, scores, class_ids = rknn(image)
 
     rknn.draw_detections(image)
    
     # 保存结果
-    cv2.imwrite("../models/test_image_06_res.jpg", image)
+    cv2.imwrite("../test_data/test_image_06_res.jpg", image)
 
     # 释放
     rknn.release()

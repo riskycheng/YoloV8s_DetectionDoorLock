@@ -12,7 +12,7 @@ from ConfigManager import ConfigManager
 from datetime import datetime, timedelta, timezone
 import time
 
-VERSION_CODE = '2024.12.27.v2.0'
+VERSION_CODE = '2024.12.27.v2.0.1'
 # default values >>>>>>>>>>>
 min_compute_queue_length = 20
 min_scale_factor = 0.6
@@ -23,7 +23,12 @@ showUI = True
 # expect to run N frame / sec
 frames_execute_per_second = 1
 
-global_queue = []
+# how to handle the treat_half_close_as_close
+treat_half_close_as_close = False
+
+
+# cache door status. true for door-open, false for door-close
+global_queue_door_open = []
 
 exit_flag = False
 
@@ -88,11 +93,11 @@ def renderCounter(frame):
     frame_height, frame_width = frame.shape[:2]
     textAnchor = (int(frame_width / 2) - 120, int(frame_height - 30))
     # check the queue
-    if len(global_queue) >= min_compute_queue_length:
+    if len(global_queue_door_open) >= min_compute_queue_length:
         class_close_cnt = 0
         class_open_cnt = 0
-        for item in global_queue:
-            if item == 1:
+        for item in global_queue_door_open:
+            if item:
                 # if any open
                 class_open_cnt += 1
         if class_open_cnt >= min_compute_queue_length * min_scale_factor:
@@ -115,13 +120,14 @@ def renderDualCounter(frame_a, frame_b, timePast):
     result_horizontal = cv2.resize(result_horizontal, (res_w, res_h))
 
     # check the queue
-    if len(global_queue) >= min_compute_queue_length:
+    # CLASSES = {0: "door_half_close", 1: "door_close", 2: "door_open"}
+    if len(global_queue_door_open) >= min_compute_queue_length:
         class_open_cnt = 0
-        for item in global_queue:
-            if item == 1:
+        for item in global_queue_door_open:
+            if item:
                 # if any open
                 class_open_cnt += 1
-        
+
         if class_open_cnt >= min_compute_queue_length * min_scale_factor:
            # render the rectangle
            cv2.rectangle(result_horizontal, (0, res_h - 40), (res_w, res_h), (0, 153, 255), -1)
@@ -140,69 +146,6 @@ def renderDualCounter(frame_a, frame_b, timePast):
     cv2.putText(result_horizontal, timePastTxt, textAnchor, cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
             
     return result_horizontal
-
-
-def startSingleExe(videoAddress):
-    global global_current_continuous_empty_count
-    cap = cv2.VideoCapture(videoAddress)
-    model_path = "./models/best.onnx"
-    yolov8_detector = YOLOv8(model_path, conf_thres=0.5, iou_thres=0.5)
-
-    video_fps = cap.get(cv2.CAP_PROP_FPS)
-
-    # this is dirty since the queried FPS doesnot match the actual running FPS
-    if video_fps > 30:
-        video_fps = 25
-
-    # private skipping frequency
-    skip_freq = int(video_fps / frames_execute_per_second)
-
-    print('video fps :' + str(video_fps) + ' skip_freq : ' + str(skip_freq))
-
-    frameIndex = 0
-    executedFrameCount = 0
-    while cap.isOpened():
-
-        # Press key q to stop
-        if cv2.waitKey(1) == ord('q'):
-            break
-
-        try:
-            # Read frame from the video
-            ret, frame = cap.read()
-            frameIndex += 1
-            if frameIndex % skip_freq != 0:
-                continue
-            if not ret:
-                break
-        except Exception as e:
-            print(e)
-            continue
-
-        # Update object localizer
-        boxes, scores, class_ids = yolov8_detector(frame)
-        executedFrameCount += 1
-        #print('executed frames:' + str(executedFrameCount))
-
-        if len(boxes) == 0:
-            global_current_continuous_empty_count += 1
-            if global_current_continuous_empty_count >= clear_global_queue_reaching_empty_det_length:
-                global_queue.clear()
-        else:
-            global_current_continuous_empty_count = 0
-
-        # compute the counter
-        for box, score, class_id in zip(boxes, scores, class_ids):
-            global_queue.append(class_id)
-
-        combined_img = yolov8_detector.draw_detections(frame)
-
-        # render the bottom rectangle
-        renderCounter(combined_img)
-
-        cv2.imshow("single-RTSP", combined_img)
-
-
 
 
 def startDualExe(videoAddressA, videoAddressB, runNPU=True):
@@ -300,15 +243,20 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
         if len(boxes_a) == 0 and len(boxes_b) == 0:
             global_current_continuous_empty_count += 1
             if global_current_continuous_empty_count >= clear_global_queue_reaching_empty_det_length:
-                global_queue.clear()
+                global_queue_door_open.clear()
         else:
             global_current_continuous_empty_count = 0
         
         # compute the counter - A
+        # CLASSES = {0: "door_half_close", 1: "door_close", 2: "door_open"}
         anyDoorOpen = False
         for box, score, class_id in zip(boxes_a, scores_a, class_ids_a):
-            if class_id == 1: # indicates door-open
+            if class_id == 2: # indicates door_open
                 anyDoorOpen = True
+            elif class_id == 0 and not treat_half_close_as_close : # indicates door-half-close
+                anyDoorOpen = True
+            else:
+                anyDoorOpen = False
             
             # assign to the structured data info
             doorInfo = DoorDetResultInfo()
@@ -318,10 +266,16 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
             boxInfo = object_rect(x=int(box[0]), y=int(box[1]), width=int(box[2]), height=int(box[3]))
             doorInfo.boundingBox = boxInfo
             fusedResultInfo_A.doorInfoArray.append(doorInfo)
-        
+
+        # compute the counter - B
+        # CLASSES = {0: "door_half_close", 1: "door_close", 2: "door_open"}
         for box, score, class_id in zip(boxes_b, scores_b, class_ids_b):
-            if class_id == 1: # indicates door-open
+            if class_id == 2: # indicates door-open
                 anyDoorOpen = True
+            elif class_id == 0 and not treat_half_close_as_close:
+                anyDoorOpen = True
+            else:
+                anyDoorOpen = False
             
             # assign to the structured data info
             doorInfo = DoorDetResultInfo()
@@ -333,11 +287,11 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
             fusedResultInfo_B.doorInfoArray.append(doorInfo)
         
         if anyDoorOpen:
-            global_queue.append(1) # any door open
+            global_queue_door_open.append(True) # any door open
         else:
-            global_queue.append(0) # door all close
+            global_queue_door_open.append(False) # door all close
 
-        # calculate the actually past time in seconds
+        # calculate the actual pastime in seconds
         pastTime_second = executedFrameCount / frames_execute_per_second
         final_concat_img = renderDualCounter(combined_img_a, combined_img_b, convert_seconds_to_ddhhmmss(pastTime_second))
 
@@ -406,7 +360,9 @@ if '__main__' == __name__:
     min_compute_queue_length = config_manager.get('min_compute_queue_length')
     min_scale_factor = config_manager.get('min_scale_factor')
     clear_global_queue_reaching_empty_det_length = config_manager.get('clear_global_queue_reaching_empty_det_length')
+    treat_half_close_as_close = config_manager.get('treat_half_close_as_close')
     showUI = config_manager.get('show_UI')
+
     print('Configurated: \n',
           '\tRUN_ON_NPU:%s \n' %('NPU' if RUN_ON_NPU else 'CPU'),
           '\tMQTT-ADDR:%s:%d @topic:%s\n' %(MQTT_IP_ADDRESS, MQTT_PORT, MQTT_TOPIC),
@@ -419,6 +375,7 @@ if '__main__' == __name__:
           '\tmin_scale_factor:%.2f \n' %min_scale_factor,
           '\tclear_global_queue_reaching_empty_det_length:%.2f \n' %clear_global_queue_reaching_empty_det_length,
           '\tshowUI:%s \n' %('True' if showUI else 'False'),
+          '\ttreat_half_close_as_close:%s \n' % ('True' if treat_half_close_as_close else 'False'),
           )
 
     # start the MQTT connection

@@ -16,6 +16,8 @@
   "min_scale_factor": 0.6,
   "?clear_global_queue_reaching_empty_det_length": "clear the above queue when reaching continuous empty detections to avoid shaky result",
   "clear_global_queue_reaching_empty_det_length": 10,
+  "?treat_half_close_as_close": "true : half_close handled as close ; false : half_close handled as open",
+  "treat_half_close_as_close": false,
   "save_out_logs": true,
   "show_UI": true
 }
