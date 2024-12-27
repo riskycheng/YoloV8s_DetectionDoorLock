@@ -12,7 +12,7 @@ from ConfigManager import ConfigManager
 from datetime import datetime, timedelta, timezone
 import time
 
-VERSION_CODE = '2024.05.29.v1.4'
+VERSION_CODE = '2024.12.27.v2.0'
 # default values >>>>>>>>>>>
 min_compute_queue_length = 20
 min_scale_factor = 0.6
@@ -226,9 +226,9 @@ def startDualExe(videoAddressA, videoAddressB, runNPU=True):
     rknn_model_path = "./models/best.rknn"
     onnx_model_path = './models/best.onnx'
     if runNPU:
-        yolov8_detector = YOLOv8_RKNN(rknn_model_path, conf_thres=0.5, iou_thres=0.5)
+        yolov8_detector = YOLOv8_RKNN(rknn_model_path)
     else:
-        yolov8_detector = YOLOv8(onnx_model_path, conf_thres=0.5, iou_thres=0.5)
+        yolov8_detector = YOLOv8(onnx_model_path)
 
     executedFrameCount = 0
 

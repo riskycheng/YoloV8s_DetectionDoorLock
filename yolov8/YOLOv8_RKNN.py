@@ -5,17 +5,18 @@ from yolov8.utils import draw_detections
 # from rknn.api import RKNN
 from rknnlite.api import RKNNLite as RKNN
 
-CLASSES = {0: "doorClose", 1: "doorOpen"}
+CLASSES = {0: "door_half_close", 1: "door_close", 2: "door_open"}
 
-nmsThresh = 0.45
-objectThresh = 0.5
+nmsThresh = 0.1
+objectThresh = 0.2
 
 model_h = 640
 model_w = 640
 
 color_palette = [
-    (0, 255, 0),  # Green for class "box"
-    (0, 0, 255)   # Red for class "box_open"
+    (0, 0, 200),  # Green for class "door_half_close"
+    (0, 255, 0),  # Green for class "door_close"
+    (0, 0, 255)   # Red for class "door_open"
 ]
 
 
