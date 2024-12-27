@@ -10,7 +10,7 @@ try:
     print(f"CUDA available: {torch.cuda.is_available()}")
     
     # Model paths
-    model_path = r"D:\DataSets\BoxDoorData\trainedModels\yolov8s_data_202412_large\best.pt"
+    model_path = r"D:\DataSets\BoxDoorData\trainedModels\yolov8s_data_202412_small\best.pt"
     print(f"\nModel path: {model_path}")
     print(f"Model exists: {os.path.exists(model_path)}")
     
